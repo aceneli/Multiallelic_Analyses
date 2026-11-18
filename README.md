@@ -8,5 +8,7 @@
 
 3. **Multiallelic variant counts:** Different combinations of allele frequencies were aggregated to determine triallelic and tetrallelic variant counts (`Allele Frequency Column Combinations Sum-Ups script`).
 
-4. **Visualisation:** Allele frequency proportions and counts were calculated and visualised using maps and bar plots (`Proportions, Counts Map and Bar Plots Generation script`).
+4. **Percentage calculations:** Percentages were calculated using spreadsheet software.
+
+5. **Visualisation:** Allele frequency proportions and counts were calculated and visualised using maps and bar plots (`Proportions, Counts Map and Bar Plots Generation script`).
 
