@@ -1,4 +1,4 @@
-# Multiallelic Analysis Workflow
+# Multiallelic Analysis
 
 ## Workflow
 
