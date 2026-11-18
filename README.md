@@ -4,7 +4,7 @@
 
 1. **Allele frequency calculation:** Allele frequencies (*AF*) were calculated from VCF files using *VCFtools* (`Allele Frequency Computation script`).
 
-2. **Allele frequency aggregation:** Allele frequency columns (`AF1`, `AF2`, `AF3` and `AF4`) from the generated `.frq` files were summed and saved as CSV files (`Allele Frequency Sum-Ups script`).
+2. **Allele frequency aggregation:** Allele frequency columns (`AF1`, `AF2`, `AF3` and `AF4`) from the generated `.frq` files were summed and saved as `.csv` files (`Allele Frequency Sum-Ups script`).
 
 3. **Multiallelic variant counts:** Different combinations of allele frequencies were aggregated to determine triallelic and tetrallelic variant counts (`Allele Frequency Column Combinations Sum-Ups script`).
 
