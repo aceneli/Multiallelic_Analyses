@@ -1,0 +1,160 @@
+# Clear the workspace
+rm(list = ls())
+
+# Import libraries
+library(ggplot2)
+library(sf)
+library(dplyr)
+library(mapplots)
+library(rnaturalearth)
+library(scales)  # for hue_pal()
+
+
+
+
+# Data
+df <- data.frame( 
+  Location= c('(AO) Angola - 78','(BF) Burkina Faso - 167', '(CM) Cameroon - 297', '(CI) Cote d’Ivoire - 71', '(EQ) Equatorial Guinea - 9', '(GA) Gabon - 69', '(GM) Gambia - 65', '(GW) Guinea Bissau - 91', '(GH) Ghana - 67', '(GN) Guinea - 44', '(KE) Kenya - 48', '(UG) Uganda - 112', '(MY) Mayotte - 24'),
+  Longitude = c(13.23, -2.23, 11.30, -4.03, 8.20, 9.27, -16.34, -15.59, -1.17, -13.7, 40.03, 32.50, 45.235),
+  Latitude = c(-8.84, 12.07, 3.54, 5.35, 4.58, 0.10, 15.12, 11.86, 5.34, 9.50, -3.34, 0.32, -12.78),
+  Pie_percentages = I(list(
+    c(82.39,17.61), c(96.74,3.26), c(74.72,25.28), c(91.99,8.01), c(63.09,36.91), c(54.97,45.03), c(84.86,15.14), c(93.60,6.40), c(89.82,10.18), c(85.25,14.75), c(78.55,21.45), c(82.33,17.67), c(96.21,3.79))),
+  Triallelic = c(216506, 8910, 400420, 49024, 731806, 968935, 164737, 31919, 75779, 156179, 306683, 217692, 11045),
+  Tetrallelic = c(6361, 41, 16217, 748, 39639, 62727, 4422, 356, 1335, 3972, 10713, 6433, 73),
+  Group = c('AO','BF','CM','CI','EQ','GA','GM','GW','GH','GN','KE','UG','MY')
+)
+
+# Generate group colors
+group_levels <- unique(df$Group)
+palette <- hue_pal()(length(group_levels))
+group_colors <- setNames(palette, group_levels)
+
+
+africa_sf <- rnaturalearth::ne_countries(
+  scale = "medium",
+  continent = "Africa",
+  returnclass = "sf"
+)
+
+# Get all African countries as an sf object
+africa <- ne_countries(continent = "Africa", returnclass = "sf")
+# Define regions based on common classifications
+#Regions
+target_regions <- c("Eastern Africa", "Western Africa", "Middle Africa")
+filtered_africa <- africa_sf |> 
+  filter(subregion %in% target_regions)
+
+
+# Transform pie percentages to columns for scatterpie
+df <- df %>%
+  mutate(
+    Class1 = sapply(Pie_percentages, `[`, 1),
+    Class2 = sapply(Pie_percentages, `[`, 2)
+  )
+
+# 1. Africa map with pie charts
+p_map <- ggplot(data = filtered_africa) +
+  geom_sf(fill = "lightgray") +
+  scatterpie::geom_scatterpie(
+    data = df,
+    aes(x = Longitude, y = Latitude, r = 2.5),  # Radius of 2.5 degrees
+    cols = c("Class1", "Class2"),
+    color = NA,
+    alpha = 0.8
+  ) +
+  scale_fill_manual(
+    name = "Allele Type",
+    values = c("orange", "purple"),
+    labels = c("Biallelic", "Multiallelic")
+  ) +
+  geom_text(
+    data = df, 
+    aes(x = Longitude, y = Latitude, label = Group),
+    size = 2, nudge_y = -1, color = "blue", fontface = "bold"
+  ) +
+  coord_sf(xlim = c(-20, 55), ylim = c(-40, 40)) +
+  theme_minimal(base_size = 14)
+labs(title = "MalariaGen Phase 2 Triallelic Site Percentage Proportions and Counts", x = "Longitude", y = "Latitude")
+
+# 2. Keep existing bar chart code
+p_bar <- ggplot(df, aes(x = Location, y = Triallelic, fill = Group)) +
+  geom_col(width = 0.7) +
+  scale_fill_manual(values = group_colors, guide = "none") +  # <-- add guide = "none"
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6.5, color = "blue"),
+    legend.position = "bottom"
+  ) +
+  labs(x = "Populations - Sample Sizes", y = "Count")
+
+
+library(cowplot)
+get_legend_35 <- function(plot, legend_number = 1) {
+  legends <- cowplot::get_plot_component(plot, "guide-box", return_all = TRUE)
+  idx <- which(vapply(legends, function(x) !inherits(x, "zeroGrob"), TRUE))
+  if (length(idx) >= legend_number) {
+    return(legends[[idx[legend_number]]])
+  } else if (length(idx) > 0) {
+    return(legends[[idx[1]]])
+  } else {
+    return(NULL)
+  }
+}
+
+
+pie_legend <- get_legend_35(p_map)
+bar_legend <- get_legend_35(
+  p_bar)
+
+
+# Remove title from p_map
+p_map_no_title <- p_map + labs(title = NULL)
+
+# Combine map and bar chart, aligning their tops
+combined <- plot_grid(
+  p_map_no_title + theme(legend.position = "none"),
+  p_bar + theme(legend.position = "none"),
+  ncol = 2, rel_widths = c(3, 2), align = "v", axis = "t"
+)
+
+# Add the title above the combined plot using ggdraw
+title <- ggdraw() + 
+  draw_label(
+    "MalariaGen Phase 2 Allele Percentage Proportions and Counts",
+    fontface = "bold", size = 16, x = 0, hjust = 0
+  )
+
+# Arrange the title, combined plots, and legends
+final_plot <- plot_grid(
+  title,
+  combined,
+  plot_grid(pie_legend, bar_legend, nrow = 1, rel_widths = c(1, 1)),
+  ncol = 1,
+  rel_heights = c(0.12, 1, 0.13)
+)
+
+print(final_plot)
+
+
+library(ggplot2)
+library(cowplot)
+
+# Assuming final_plot is created already
+# Add white background to plot (if possible, e.g., for ggplot objects)
+# For cowplot objects, you can wrap in ggdraw + draw_plot with background
+
+final_plot_with_bg <- ggdraw(final_plot) + 
+  theme(plot.background = element_rect(fill = "white", color = NA))
+
+#tiff("Allele_Map.tiff", width = 6, height = 4, units = "in", res = 300, compression = "lzw", type = "cairo")
+# Your plotting code here
+#dev.off()
+
+
+##tiff("Allele_Map.pdf", width = 6, height = 4, units = "in", res = 300, compression = "lzw")
+#plot(1:10, 1:10)
+#dev.off()
+
+print(final_plot)
+
+#ggsave("Triallelic_map.pdf", plot = final_plot, width = 12, height = 8, units = "in", dpi = 300, bg = "white")
